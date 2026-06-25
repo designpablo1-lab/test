@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.1/kakao.min.js" integrity="17c9e9ef7d72c6fed25971d1fe5fa2f8" crossorigin="anonymous"></script>
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=17c9e9ef7d72c6fed25971d1fe5fa2f8"></script>
   <title>MVP W1 지도 실증</title>
   <style>
     :root {
@@ -292,44 +293,6 @@
       resize: vertical;
     }
 
-    .map-stage {
-      position: relative;
-      min-height: 520px;
-      border-bottom: 1px solid var(--line);
-      background:
-        linear-gradient(90deg, rgba(32, 36, 34, 0.05) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(32, 36, 34, 0.05) 1px, transparent 1px),
-        #f8faf7;
-      background-size: 56px 56px;
-      overflow: hidden;
-    }
-
-    .map-stage::before,
-    .map-stage::after {
-      content: "";
-      position: absolute;
-      inset: auto;
-      background: rgba(23, 107, 88, 0.12);
-      pointer-events: none;
-    }
-
-    .map-stage::before {
-      left: -8%;
-      top: 24%;
-      width: 116%;
-      height: 42px;
-      transform: rotate(-8deg);
-    }
-
-    .map-stage::after {
-      left: 28%;
-      top: -6%;
-      width: 38px;
-      height: 116%;
-      transform: rotate(18deg);
-      background: rgba(177, 77, 36, 0.12);
-    }
-
     .route-svg {
       position: absolute;
       inset: 0;
@@ -499,10 +462,6 @@
       .route-summary {
         grid-template-columns: 1fr;
       }
-
-      .map-stage {
-        min-height: 420px;
-      }
     }
   </style>
 </head>
@@ -567,17 +526,6 @@
           </div>
         </div>
 
-        <div class="map-stage" aria-label="현재 위치, 도착 위치, 경로 시각화">
-          <svg class="route-svg" viewBox="0 0 1000 650" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M 150 455 C 260 355, 340 390, 430 310 S 650 205, 815 170" fill="none" stroke="#dde4dc" stroke-width="36" stroke-linecap="round"/>
-            <path id="routePath" d="M 150 455 C 260 355, 340 390, 430 310 S 650 205, 815 170" fill="none" stroke="#176b58" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 1"/>
-          </svg>
-          <div id="currentMarker" class="marker current" style="left: 15%; top: 70%;"></div>
-          <div id="destinationMarker" class="marker destination" style="left: 82%; top: 26%;"></div>
-          <div id="currentLabel" class="marker-label" style="left: 15%; top: 70%;">서울시청</div>
-          <div id="destinationLabel" class="marker-label" style="left: 82%; top: 26%;">도착지</div>
-        </div>
-
         <div class="panel-body stack">
           <div class="route-summary">
             <div class="summary-cell">
@@ -601,12 +549,12 @@
             <button id="loadKakaoBtn" class="primary" type="button" disabled>웹뷰 호출</button>
             <a id="openKakaoLink" href="#" target="_blank" rel="noreferrer" aria-disabled="true">새 창 열기</a>
           </div>
-          <iframe
+          <div
             id="mapWebView"
             class="webview"
             title="카카오맵 웹뷰"
             srcdoc="<style>body{margin:0;font-family:system-ui;background:#f7f8f6;color:#344039;display:grid;place-items:center;height:100vh;text-align:center}strong{display:block;font-size:18px;color:#202422}</style><div><strong>웹뷰 대기</strong><span>버튼 클릭 시 카카오맵 URL이 로드됩니다.</span></div>">
-          </iframe>
+          </div>
         </div>
       </section>
 
@@ -1238,19 +1186,15 @@
     $("#moveStepBtn").addEventListener("click", moveStep);
     $("#arriveBtn").addEventListener("click", arriveNow);
     $("#loadKakaoBtn").addEventListener("click", () => {
-      if (!state.route?.kakaoUrl) return;
-      elements.mapWebView.src = state.route.kakaoUrl;
-      logApi({
-        request: {
-          method: "WEBVIEW_LOAD",
-          path: state.route.kakaoUrl,
-          body: {
-            origin: state.currentLocation,
-            destination: state.selectedPlace
-          }
-        },
-        response: { ok: true, loadedIn: "iframe-webview" }
-      });
+        if (!state.route?.kakaoUrl) return;
+        elements.mapWebView.src = state.route.kakaoUrl;
+        var container = document.getElementById('map'); //지도를 담을 영역의 DOM 레퍼런스
+        var options = { //지도를 생성할 때 필요한 기본 옵션
+        center: new kakao.maps.LatLng(33.450701, 126.570667), //지도의 중심좌표.
+        level: 3 //지도의 레벨(확대, 축소 정도)
+    };
+
+var map = new kakao.maps.Map(container, options); //지도 생성 및 객체 리턴
     });
     $("#saveFeedbackBtn").addEventListener("click", () => saveFeedback());
     $("#interruptBtn").addEventListener("click", () => {
