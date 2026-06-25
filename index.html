@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://t1.kakaocdn.net/kakao_js_sdk/${VERSION}/kakao.min.js" integrity="<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.1/kakao.min.js" integrity="sha384-OL+ylM/iuPLtW5U3XcvLSGhE8JzReKDank5InqlHGWPhb4140/yrBw0bg0y7+C9J" crossorigin="anonymous"></script>" crossorigin="anonymous"></script>
+  <title>MVP W1 지도 실증</title>
+  <style>
+    :root {
+      --bg: #f4f5f2;
+      --panel: #ffffff;
+      --ink: #202422;
+      --muted: #6c746f;
+      --line: #d9ded8;
+      --accent: #176b58;
+      --accent-2: #b14d24;
+      --warn: #9a3412;
+      --good: #166534;
+      --soft: #e9f1ed;
+      --soft-2: #f6e7dc;
+      --shadow: 0 12px 28px rgba(30, 36, 32, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(244, 245, 242, 0.94), rgba(244, 245, 242, 1)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='480' viewBox='0 0 800 480'%3E%3Cg fill='none' stroke='%23d3d9d2' stroke-width='2' opacity='0.65'%3E%3Cpath d='M0 88 C120 72 214 148 330 121 C452 94 536 24 800 58'/%3E%3Cpath d='M0 240 C142 184 252 270 384 230 C500 194 562 150 800 171'/%3E%3Cpath d='M42 0 C114 104 98 212 168 300 C224 370 330 392 414 480'/%3E%3Cpath d='M518 0 C478 94 534 178 502 256 C462 354 380 394 346 480'/%3E%3Cpath d='M650 0 C724 80 674 174 742 242 C782 282 792 344 800 410'/%3E%3C/g%3E%3Cg fill='%23ffffff' stroke='%23c8cec6'%3E%3Crect x='80' y='72' width='96' height='48' rx='4'/%3E%3Crect x='476' y='132' width='122' height='58' rx='4'/%3E%3Crect x='224' y='326' width='118' height='54' rx='4'/%3E%3Crect x='610' y='314' width='108' height='56' rx='4'/%3E%3C/g%3E%3C/svg%3E");
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--ink);
+      min-height: 38px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    button:hover {
+      border-color: #9aa69f;
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      transform: none;
+    }
+
+    .primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .danger {
+      background: var(--soft-2);
+      border-color: #e6b89e;
+      color: var(--warn);
+    }
+
+    .shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(24px, 3vw, 40px);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .metric {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 18px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 360px) minmax(360px, 1fr) minmax(300px, 390px);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .log-layout {
+      margin-top: 16px;
+      grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 54px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(250, 251, 249, 0.92);
+    }
+
+    .panel-body {
+      padding: 14px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .item {
+      width: 100%;
+      display: grid;
+      gap: 4px;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      padding: 10px;
+      min-height: 70px;
+    }
+
+    .item[aria-selected="true"] {
+      border-color: var(--accent);
+      background: var(--soft);
+    }
+
+    .item-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+      font-weight: 700;
+    }
+
+    .item-title span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: #edf0ed;
+      color: #344039;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .badge.good {
+      background: #dcfce7;
+      color: var(--good);
+    }
+
+    .badge.warn {
+      background: #ffedd5;
+      color: var(--warn);
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      padding: 9px 10px;
+      min-height: 38px;
+    }
+
+    textarea {
+      min-height: 82px;
+      resize: vertical;
+    }
+
+    .map-stage {
+      position: relative;
+      min-height: 520px;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(90deg, rgba(32, 36, 34, 0.05) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(32, 36, 34, 0.05) 1px, transparent 1px),
+        #f8faf7;
+      background-size: 56px 56px;
+      overflow: hidden;
+    }
+
+    .map-stage::before,
+    .map-stage::after {
+      content: "";
+      position: absolute;
+      inset: auto;
+      background: rgba(23, 107, 88, 0.12);
+      pointer-events: none;
+    }
+
+    .map-stage::before {
+      left: -8%;
+      top: 24%;
+      width: 116%;
+      height: 42px;
+      transform: rotate(-8deg);
+    }
+
+    .map-stage::after {
+      left: 28%;
+      top: -6%;
+      width: 38px;
+      height: 116%;
+      transform: rotate(18deg);
+      background: rgba(177, 77, 36, 0.12);
+    }
+
+    .route-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .marker {
+      position: absolute;
+      z-index: 2;
+      width: 18px;
+      height: 18px;
+      border: 3px solid #fff;
+      border-radius: 999px;
+      box-shadow: 0 8px 18px rgba(32, 36, 34, 0.25);
+      transform: translate(-50%, -50%);
+    }
+
+    .marker.current {
+      background: var(--accent);
+    }
+
+    .marker.destination {
+      background: var(--accent-2);
+    }
+
+    .marker-label {
+      position: absolute;
+      z-index: 3;
+      max-width: 180px;
+      transform: translate(-50%, calc(-100% - 12px));
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.94);
+      padding: 6px 8px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 8px 16px rgba(32, 36, 34, 0.12);
+    }
+
+    .route-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .summary-cell {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .summary-cell span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .summary-cell strong {
+      display: block;
+      margin-top: 3px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .webview {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-height: 240px;
+      border: 0;
+      background: #f7f8f6;
+    }
+
+    .code {
+      display: block;
+      width: 100%;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #111816;
+      color: #d7fbe8;
+      padding: 10px;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      max-height: 230px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .hook-feed {
+      display: grid;
+      gap: 8px;
+      max-height: 210px;
+      overflow: auto;
+    }
+
+    .hook-entry {
+      border-left: 3px solid var(--accent);
+      background: #f7faf8;
+      padding: 8px 9px;
+      font-size: 13px;
+    }
+
+    .hook-entry strong {
+      display: block;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+
+    .tabs button {
+      border: 0;
+      border-radius: 0;
+      background: #fff;
+    }
+
+    .tabs button[aria-selected="true"] {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: minmax(300px, 380px) minmax(360px, 1fr);
+      }
+
+      .side-right {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 780px) {
+      .shell {
+        padding: 12px;
+      }
+
+      header {
+        display: grid;
+      }
+
+      .status-strip,
+      .layout,
+      .log-layout,
+      .route-summary {
+        grid-template-columns: 1fr;
+      }
+
+      .map-stage {
+        min-height: 420px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <h1>MVP W1 지도 실증 콘솔</h1>
+        <p class="subtle">장소 조회, 지도 URL 호출, 경로 시각화, 도착 훅, 종료/중단 피드백 저장</p>
+      </div>
+      <div class="actions">
+        <button id="resetDemoBtn" type="button">초기화</button>
+        <button id="loadPlacesBtn" class="primary" type="button">GET /place</button>
+      </div>
+    </header>
+
+    <section class="status-strip" aria-label="실증 상태">
+      <div class="metric">
+        <span>현재 위치</span>
+        <strong id="currentMetric">서울시청</strong>
+      </div>
+      <div class="metric">
+        <span>도착 위치</span>
+        <strong id="destinationMetric">미선택</strong>
+      </div>
+      <div class="metric">
+        <span>도착 반경</span>
+        <strong id="radiusMetric">80 m</strong>
+      </div>
+      <div class="metric">
+        <span>상황 보고</span>
+        <strong id="hookMetric">대기</strong>
+      </div>
+    </section>
+
+    <section class="layout">
+      <aside class="panel">
+        <div class="panel-header">
+          <h2>장소</h2>
+          <span class="badge" id="placeCount">0개</span>
+        </div>
+        <div class="panel-body stack">
+          <div id="placeList" class="list" aria-live="polite"></div>
+          <div class="field">
+            <label for="selectedAddress">선택 장소 주소</label>
+            <input id="selectedAddress" type="text" readonly value="장소 목록에서 선택">
+          </div>
+          <div class="field">
+            <label for="placeResponse">/place 응답</label>
+            <pre id="placeResponse" class="code">{}</pre>
+          </div>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>지도 및 경로</h2>
+          <div class="actions">
+            <button id="callMapBtn" type="button" disabled>지도 API 호출</button>
+            <button id="moveStepBtn" type="button" disabled>위치 이동</button>
+            <button id="arriveBtn" type="button" disabled>도착 처리</button>
+          </div>
+        </div>
+
+        <div class="map-stage" aria-label="현재 위치, 도착 위치, 경로 시각화">
+          <svg class="route-svg" viewBox="0 0 1000 650" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M 150 455 C 260 355, 340 390, 430 310 S 650 205, 815 170" fill="none" stroke="#dde4dc" stroke-width="36" stroke-linecap="round"/>
+            <path id="routePath" d="M 150 455 C 260 355, 340 390, 430 310 S 650 205, 815 170" fill="none" stroke="#176b58" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 1"/>
+          </svg>
+          <div id="currentMarker" class="marker current" style="left: 15%; top: 70%;"></div>
+          <div id="destinationMarker" class="marker destination" style="left: 82%; top: 26%;"></div>
+          <div id="currentLabel" class="marker-label" style="left: 15%; top: 70%;">서울시청</div>
+          <div id="destinationLabel" class="marker-label" style="left: 82%; top: 26%;">도착지</div>
+        </div>
+
+        <div class="panel-body stack">
+          <div class="route-summary">
+            <div class="summary-cell">
+              <span>거리</span>
+              <strong id="distanceText">-</strong>
+            </div>
+            <div class="summary-cell">
+              <span>예상 시간</span>
+              <strong id="durationText">-</strong>
+            </div>
+            <div class="summary-cell">
+              <span>남은 거리</span>
+              <strong id="remainingText">-</strong>
+            </div>
+          </div>
+          <div class="field">
+            <label for="kakaoUrl">카카오맵 URL 패턴</label>
+            <input id="kakaoUrl" type="text" readonly value="도착지 선택 후 생성">
+          </div>
+          <div class="actions">
+            <button id="loadKakaoBtn" class="primary" type="button" disabled>웹뷰 호출</button>
+            <a id="openKakaoLink" href="#" target="_blank" rel="noreferrer" aria-disabled="true">새 창 열기</a>
+          </div>
+          <iframe
+            id="mapWebView"
+            class="webview"
+            title="카카오맵 웹뷰"
+            srcdoc="<style>body{margin:0;font-family:system-ui;background:#f7f8f6;color:#344039;display:grid;place-items:center;height:100vh;text-align:center}strong{display:block;font-size:18px;color:#202422}</style><div><strong>웹뷰 대기</strong><span>버튼 클릭 시 카카오맵 URL이 로드됩니다.</span></div>">
+          </iframe>
+        </div>
+      </section>
+
+      <aside class="panel side-right">
+        <div class="panel-header">
+          <h2>트립 및 저장</h2>
+          <span class="badge" id="tripStatus">준비</span>
+        </div>
+        <div class="panel-body stack">
+          <div class="tabs" role="tablist" aria-label="트립 패널">
+            <button id="tripTabBtn" type="button" role="tab" aria-selected="true" aria-controls="tripPanel">트립</button>
+            <button id="feedbackTabBtn" type="button" role="tab" aria-selected="false" aria-controls="feedbackPanel">피드백</button>
+          </div>
+
+          <section id="tripPanel" class="stack" role="tabpanel" aria-labelledby="tripTabBtn">
+            <div class="actions">
+              <button id="loadTripsBtn" type="button">GET /trips</button>
+              <button id="getTripBtn" type="button" disabled>GET /trips/:id</button>
+              <button id="updateTripBtn" type="button" disabled>PATCH /trips/:id</button>
+            </div>
+            <div id="tripList" class="list" aria-live="polite"></div>
+            <div class="field">
+              <label for="tripResponse">트립 응답</label>
+              <pre id="tripResponse" class="code">{}</pre>
+            </div>
+          </section>
+
+          <section id="feedbackPanel" class="stack hidden" role="tabpanel" aria-labelledby="feedbackTabBtn">
+            <div class="field">
+              <label for="feedbackState">종료 상태</label>
+              <select id="feedbackState">
+                <option value="completed">완료</option>
+                <option value="interrupted">중단</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="feedbackMemo">메모</label>
+              <textarea id="feedbackMemo">도착 반경 진입 상황 보고 확인</textarea>
+            </div>
+            <div class="actions">
+              <button id="saveFeedbackBtn" class="primary" type="button">POST /feedback</button>
+              <button id="interruptBtn" class="danger" type="button">중단 저장</button>
+            </div>
+            <div class="field">
+              <label for="feedbackResponse">피드백 저장 응답</label>
+              <pre id="feedbackResponse" class="code">{}</pre>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </section>
+
+    <section class="layout log-layout">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>상황 훅</h2>
+          <span class="badge good" id="hookCount">0건</span>
+        </div>
+        <div class="panel-body">
+          <div id="hookFeed" class="hook-feed" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>클라이언트 요청/응답</h2>
+          <span class="badge">실증 로그</span>
+        </div>
+        <div class="panel-body">
+          <pre id="apiLog" class="code">[]</pre>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const PROXIMITY_RADIUS_M = 80;
+    const API_MODE = "mock";
+    const API_BASE_URL = "";
+
+    const mockPlaces = [
+      {
+        id: "place-namsan",
+        name: "남산서울타워",
+        address: "서울특별시 용산구 남산공원길 105",
+        lat: 37.5511694,
+        lng: 126.9882266
+      },
+      {
+        id: "place-gwanghwamun",
+        name: "광화문광장",
+        address: "서울특별시 종로구 세종대로 172",
+        lat: 37.5726107,
+        lng: 126.976907
+      },
+      {
+        id: "place-ddp",
+        name: "동대문디자인플라자",
+        address: "서울특별시 중구 을지로 281",
+        lat: 37.566525,
+        lng: 127.009223
+      }
+    ];
+
+    const mockTrips = [
+      {
+        id: "trip-1001",
+        title: "서울시청 출발 실증",
+        status: "draft",
+        origin: {
+          name: "서울시청",
+          address: "서울특별시 중구 세종대로 110",
+          lat: 37.5662952,
+          lng: 126.9779451
+        },
+        destinationId: "place-namsan",
+        updatedAt: "2026-06-25T16:30:00+09:00"
+      },
+      {
+        id: "trip-1002",
+        title: "광화문 경유 테스트",
+        status: "ready",
+        origin: {
+          name: "서울시청",
+          address: "서울특별시 중구 세종대로 110",
+          lat: 37.5662952,
+          lng: 126.9779451
+        },
+        destinationId: "place-gwanghwamun",
+        updatedAt: "2026-06-25T16:35:00+09:00"
+      }
+    ];
+
+    const state = {
+      places: [],
+      trips: [],
+      selectedPlace: null,
+      selectedTrip: null,
+      currentLocation: { ...mockTrips[0].origin },
+      progress: 0,
+      route: null,
+      hooks: [],
+      apiLog: []
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const elements = {
+      placeList: $("#placeList"),
+      placeCount: $("#placeCount"),
+      selectedAddress: $("#selectedAddress"),
+      placeResponse: $("#placeResponse"),
+      currentMetric: $("#currentMetric"),
+      destinationMetric: $("#destinationMetric"),
+      radiusMetric: $("#radiusMetric"),
+      hookMetric: $("#hookMetric"),
+      callMapBtn: $("#callMapBtn"),
+      moveStepBtn: $("#moveStepBtn"),
+      arriveBtn: $("#arriveBtn"),
+      routePath: $("#routePath"),
+      currentMarker: $("#currentMarker"),
+      destinationMarker: $("#destinationMarker"),
+      currentLabel: $("#currentLabel"),
+      destinationLabel: $("#destinationLabel"),
+      distanceText: $("#distanceText"),
+      durationText: $("#durationText"),
+      remainingText: $("#remainingText"),
+      kakaoUrl: $("#kakaoUrl"),
+      loadKakaoBtn: $("#loadKakaoBtn"),
+      openKakaoLink: $("#openKakaoLink"),
+      mapWebView: $("#mapWebView"),
+      tripStatus: $("#tripStatus"),
+      tripList: $("#tripList"),
+      tripResponse: $("#tripResponse"),
+      getTripBtn: $("#getTripBtn"),
+      updateTripBtn: $("#updateTripBtn"),
+      feedbackState: $("#feedbackState"),
+      feedbackMemo: $("#feedbackMemo"),
+      feedbackResponse: $("#feedbackResponse"),
+      hookFeed: $("#hookFeed"),
+      hookCount: $("#hookCount"),
+      apiLog: $("#apiLog"),
+      tripPanel: $("#tripPanel"),
+      feedbackPanel: $("#feedbackPanel"),
+      tripTabBtn: $("#tripTabBtn"),
+      feedbackTabBtn: $("#feedbackTabBtn")
+    };
+
+    function delay(ms = 180) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function renderJson(target, payload) {
+      target.textContent = JSON.stringify(payload, null, 2);
+    }
+
+    function logApi(entry) {
+      state.apiLog = [
+        {
+          at: new Date().toLocaleTimeString("ko-KR"),
+          mode: API_MODE,
+          ...entry
+        },
+        ...state.apiLog
+      ].slice(0, 15);
+      renderJson(elements.apiLog, state.apiLog);
+    }
+
+    async function backendRequest(method, path, body) {
+      if (API_MODE === "real") {
+        const request = { method, path, body: body ?? null };
+        const fetchOptions = {
+          method,
+          headers: body ? { "Content-Type": "application/json" } : undefined,
+          body: body ? JSON.stringify(body) : undefined
+        };
+        const raw = await fetch(`${API_BASE_URL}${path}`, fetchOptions);
+        const contentType = raw.headers.get("content-type") || "";
+        const data = contentType.includes("application/json") ? await raw.json() : await raw.text();
+        const response = { ok: raw.ok, status: raw.status, data };
+        logApi({ request, response });
+        return response;
+      }
+
+      await delay();
+      const request = { method, path, body: body ?? null };
+      let response;
+
+      if (path === "/place" && method === "GET") {
+        response = { ok: true, data: mockPlaces };
+      } else if (path === "/trips" && method === "GET") {
+        response = { ok: true, data: mockTrips };
+      } else if (path.startsWith("/trips/") && method === "GET") {
+        const tripId = path.split("/").at(-1);
+        const trip = mockTrips.find((item) => item.id === tripId);
+        response = trip ? { ok: true, data: hydrateTrip(trip) } : { ok: false, error: "TRIP_NOT_FOUND" };
+      } else if (path.startsWith("/trips/") && method === "PATCH") {
+        const tripId = path.split("/").at(-1);
+        const trip = mockTrips.find((item) => item.id === tripId);
+        if (trip) {
+          Object.assign(trip, body, { updatedAt: new Date().toISOString() });
+          response = { ok: true, data: hydrateTrip(trip) };
+        } else {
+          response = { ok: false, error: "TRIP_NOT_FOUND" };
+        }
+      } else if (path === "/feedback" && method === "POST") {
+        const saved = {
+          id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `feedback-${Date.now()}`,
+          savedAt: new Date().toISOString(),
+          ...body
+        };
+        const previous = JSON.parse(localStorage.getItem("mvp-w1-feedback") || "[]");
+        localStorage.setItem("mvp-w1-feedback", JSON.stringify([saved, ...previous].slice(0, 20)));
+        response = { ok: true, data: saved };
+      } else {
+        response = { ok: false, error: "MOCK_ROUTE_NOT_FOUND" };
+      }
+
+      logApi({ request, response });
+      return response;
+    }
+
+    function hydrateTrip(trip) {
+      return {
+        ...trip,
+        destination: mockPlaces.find((place) => place.id === trip.destinationId) ?? null
+      };
+    }
+
+    function metersBetween(a, b) {
+      const earthRadiusM = 6371000;
+      const dLat = toRad(b.lat - a.lat);
+      const dLng = toRad(b.lng - a.lng);
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+      const x = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+      return 2 * earthRadiusM * Math.asin(Math.sqrt(x));
+    }
+
+    function toRad(value) {
+      return value * Math.PI / 180;
+    }
+
+    function interpolateLocation(origin, destination, progress) {
+      return {
+        name: origin.name,
+        address: origin.address,
+        lat: origin.lat + (destination.lat - origin.lat) * progress,
+        lng: origin.lng + (destination.lng - origin.lng) * progress
+      };
+    }
+
+    function formatMeters(value) {
+      if (!Number.isFinite(value)) return "-";
+      if (value >= 1000) return `${(value / 1000).toFixed(2)} km`;
+      return `${Math.round(value)} m`;
+    }
+
+    function encodeKakaoSegment(location) {
+      return `${encodeURIComponent(location.name)},${location.lat},${location.lng}`;
+    }
+
+    function buildKakaoDirectionUrl(origin, destination) {
+      return `https://map.kakao.com/link/by/walk/${encodeKakaoSegment(origin)}/${encodeKakaoSegment(destination)}`;
+    }
+
+    async function callMapService(origin, destination) {
+      await delay(220);
+      const distanceM = metersBetween(origin, destination);
+      const durationMin = Math.max(4, Math.round(distanceM / 70));
+      const response = {
+        provider: "kakao-map-link-pattern",
+        request: {
+          origin,
+          destination,
+          clientLocationSent: true
+        },
+        route: {
+          distanceM,
+          durationMin,
+          kakaoUrl: buildKakaoDirectionUrl(origin, destination),
+          path: [
+            origin,
+            interpolateLocation(origin, destination, 0.28),
+            interpolateLocation(origin, destination, 0.62),
+            destination
+          ]
+        }
+      };
+
+      logApi({
+        request: {
+          method: "POST",
+          path: "/map/route",
+          body: response.request
+        },
+        response
+      });
+      return response;
+    }
+
+    function renderPlaces() {
+      elements.placeCount.textContent = `${state.places.length}개`;
+      elements.placeList.innerHTML = "";
+      state.places.forEach((place) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "item";
+        button.setAttribute("aria-selected", String(state.selectedPlace?.id === place.id));
+        button.innerHTML = `
+          <span class="item-title"><span>${place.name}</span><span class="badge">${place.id}</span></span>
+          <span class="subtle">${place.address}</span>
+        `;
+        button.addEventListener("click", () => selectPlace(place.id));
+        elements.placeList.appendChild(button);
+      });
+
+      if (state.places.length === 0) {
+        elements.placeList.innerHTML = '<div class="subtle">장소 응답 대기</div>';
+      }
+    }
+
+    function renderTrips() {
+      elements.tripList.innerHTML = "";
+      state.trips.forEach((trip) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "item";
+        button.setAttribute("aria-selected", String(state.selectedTrip?.id === trip.id));
+        button.innerHTML = `
+          <span class="item-title"><span>${trip.title}</span><span class="badge">${trip.status}</span></span>
+          <span class="subtle">${trip.id} · ${trip.updatedAt}</span>
+        `;
+        button.addEventListener("click", () => selectTrip(trip.id));
+        elements.tripList.appendChild(button);
+      });
+
+      if (state.trips.length === 0) {
+        elements.tripList.innerHTML = '<div class="subtle">트립 응답 대기</div>';
+      }
+    }
+
+    function selectPlace(placeId) {
+      state.selectedPlace = state.places.find((place) => place.id === placeId) ?? null;
+      state.progress = 0;
+      state.route = null;
+      state.currentLocation = { ...mockTrips[0].origin };
+      elements.selectedAddress.value = state.selectedPlace?.address ?? "";
+      elements.destinationMetric.textContent = state.selectedPlace?.name ?? "미선택";
+      elements.callMapBtn.disabled = !state.selectedPlace;
+      elements.moveStepBtn.disabled = true;
+      elements.arriveBtn.disabled = true;
+      elements.loadKakaoBtn.disabled = true;
+      elements.kakaoUrl.value = "지도 API 호출 후 생성";
+      elements.openKakaoLink.href = "#";
+      elements.openKakaoLink.setAttribute("aria-disabled", "true");
+      renderPlaces();
+      renderMap();
+      renderRouteSummary();
+    }
+
+    function selectTrip(tripId) {
+      const trip = state.trips.find((item) => item.id === tripId);
+      state.selectedTrip = trip ?? null;
+      elements.getTripBtn.disabled = !trip;
+      elements.updateTripBtn.disabled = !trip;
+      renderTrips();
+    }
+
+    function renderMap() {
+      const destination = state.selectedPlace;
+      const current = state.currentLocation;
+      const currentPoint = pointFromProgress(state.progress);
+      const destinationPoint = { left: 82, top: 26 };
+
+      elements.currentMarker.style.left = `${currentPoint.left}%`;
+      elements.currentMarker.style.top = `${currentPoint.top}%`;
+      elements.currentLabel.style.left = `${currentPoint.left}%`;
+      elements.currentLabel.style.top = `${currentPoint.top}%`;
+      elements.currentLabel.textContent = current.name || "현재 위치";
+
+      elements.destinationMarker.style.left = `${destinationPoint.left}%`;
+      elements.destinationMarker.style.top = `${destinationPoint.top}%`;
+      elements.destinationLabel.style.left = `${destinationPoint.left}%`;
+      elements.destinationLabel.style.top = `${destinationPoint.top}%`;
+      elements.destinationLabel.textContent = destination?.name ?? "도착지";
+      elements.currentMetric.textContent = current.name || "현재 위치";
+
+      const dash = state.route ? `${Math.max(0.02, state.progress) * 760} 760` : "0 1";
+      elements.routePath.setAttribute("stroke-dasharray", dash);
+    }
+
+    function pointFromProgress(progress) {
+      return {
+        left: 15 + (82 - 15) * progress,
+        top: 70 + (26 - 70) * progress
+      };
+    }
+
+    function renderRouteSummary() {
+      if (!state.route || !state.selectedPlace) {
+        elements.distanceText.textContent = "-";
+        elements.durationText.textContent = "-";
+        elements.remainingText.textContent = "-";
+        return;
+      }
+
+      const remainingM = metersBetween(state.currentLocation, state.selectedPlace);
+      elements.distanceText.textContent = formatMeters(state.route.distanceM);
+      elements.durationText.textContent = `${state.route.durationMin}분`;
+      elements.remainingText.textContent = formatMeters(remainingM);
+    }
+
+    function reportHook(type, payload) {
+      const entry = {
+        id: `hook-${Date.now()}`,
+        at: new Date().toLocaleTimeString("ko-KR"),
+        type,
+        payload
+      };
+      state.hooks = [entry, ...state.hooks].slice(0, 20);
+      elements.hookMetric.textContent = type === "arrival_proximity" ? "반경 진입" : "보고";
+      elements.hookCount.textContent = `${state.hooks.length}건`;
+      renderHookFeed();
+    }
+
+    function renderHookFeed() {
+      elements.hookFeed.innerHTML = "";
+      state.hooks.forEach((hook) => {
+        const div = document.createElement("div");
+        div.className = "hook-entry";
+        div.innerHTML = `<strong>${hook.type} · ${hook.at}</strong><span>${JSON.stringify(hook.payload)}</span>`;
+        elements.hookFeed.appendChild(div);
+      });
+
+      if (state.hooks.length === 0) {
+        elements.hookFeed.innerHTML = '<div class="subtle">상황 보고 대기</div>';
+      }
+    }
+
+    async function loadPlaces() {
+      const response = await backendRequest("GET", "/place");
+      if (response.ok) {
+        state.places = response.data;
+        renderJson(elements.placeResponse, response);
+        renderPlaces();
+      }
+    }
+
+    async function loadTrips() {
+      const response = await backendRequest("GET", "/trips");
+      if (response.ok) {
+        state.trips = response.data;
+        elements.tripStatus.textContent = `${response.data.length}건`;
+        renderJson(elements.tripResponse, response);
+        renderTrips();
+      }
+    }
+
+    async function getSelectedTrip() {
+      if (!state.selectedTrip) return;
+      const response = await backendRequest("GET", `/trips/${state.selectedTrip.id}`);
+      renderJson(elements.tripResponse, response);
+    }
+
+    async function updateSelectedTrip() {
+      if (!state.selectedTrip) return;
+      const destinationId = state.selectedPlace?.id ?? state.selectedTrip.destinationId;
+      const response = await backendRequest("PATCH", `/trips/${state.selectedTrip.id}`, {
+        status: "ready",
+        destinationId
+      });
+      renderJson(elements.tripResponse, response);
+      elements.tripStatus.textContent = response.ok ? "수정됨" : "오류";
+      state.trips = [...mockTrips];
+      state.selectedTrip = mockTrips.find((trip) => trip.id === state.selectedTrip.id);
+      renderTrips();
+    }
+
+    async function requestMapRoute() {
+      if (!state.selectedPlace) return;
+      const response = await callMapService(state.currentLocation, state.selectedPlace);
+      state.route = response.route;
+      elements.kakaoUrl.value = response.route.kakaoUrl;
+      elements.openKakaoLink.href = response.route.kakaoUrl;
+      elements.openKakaoLink.removeAttribute("aria-disabled");
+      elements.loadKakaoBtn.disabled = false;
+      elements.moveStepBtn.disabled = false;
+      elements.arriveBtn.disabled = false;
+      renderRouteSummary();
+      renderMap();
+    }
+
+    function moveStep() {
+      if (!state.route || !state.selectedPlace) return;
+      state.progress = Math.min(1, state.progress + 0.2);
+      state.currentLocation = interpolateLocation(mockTrips[0].origin, state.selectedPlace, state.progress);
+      renderMap();
+      renderRouteSummary();
+      evaluateArrivalHook();
+    }
+
+    function arriveNow() {
+      if (!state.route || !state.selectedPlace) return;
+      state.progress = 1;
+      state.currentLocation = { ...state.selectedPlace, name: "현재 위치" };
+      renderMap();
+      renderRouteSummary();
+      evaluateArrivalHook(true);
+    }
+
+    function evaluateArrivalHook(force = false) {
+      if (!state.selectedPlace) return;
+      const remainingM = metersBetween(state.currentLocation, state.selectedPlace);
+      if (force || remainingM <= PROXIMITY_RADIUS_M) {
+        reportHook("arrival_proximity", {
+          currentLocation: state.currentLocation,
+          destination: state.selectedPlace,
+          remainingM: Math.round(remainingM),
+          thresholdM: PROXIMITY_RADIUS_M
+        });
+      }
+    }
+
+    async function saveFeedback(overrideState) {
+      const status = overrideState ?? elements.feedbackState.value;
+      const response = await backendRequest("POST", "/feedback", {
+        tripId: state.selectedTrip?.id ?? null,
+        placeId: state.selectedPlace?.id ?? null,
+        status,
+        memo: elements.feedbackMemo.value,
+        route: state.route,
+        lastKnownLocation: state.currentLocation,
+        hooks: state.hooks
+      });
+      renderJson(elements.feedbackResponse, response);
+      elements.tripStatus.textContent = status === "interrupted" ? "중단 저장" : "완료 저장";
+    }
+
+    function showTab(tabName) {
+      const isTrip = tabName === "trip";
+      elements.tripPanel.classList.toggle("hidden", !isTrip);
+      elements.feedbackPanel.classList.toggle("hidden", isTrip);
+      elements.tripTabBtn.setAttribute("aria-selected", String(isTrip));
+      elements.feedbackTabBtn.setAttribute("aria-selected", String(!isTrip));
+    }
+
+    function resetDemo() {
+      state.places = [];
+      state.trips = [];
+      state.selectedPlace = null;
+      state.selectedTrip = null;
+      state.currentLocation = { ...mockTrips[0].origin };
+      state.progress = 0;
+      state.route = null;
+      state.hooks = [];
+      state.apiLog = [];
+
+      elements.selectedAddress.value = "장소 목록에서 선택";
+      elements.placeResponse.textContent = "{}";
+      elements.tripResponse.textContent = "{}";
+      elements.feedbackResponse.textContent = "{}";
+      elements.destinationMetric.textContent = "미선택";
+      elements.hookMetric.textContent = "대기";
+      elements.hookCount.textContent = "0건";
+      elements.tripStatus.textContent = "준비";
+      elements.callMapBtn.disabled = true;
+      elements.moveStepBtn.disabled = true;
+      elements.arriveBtn.disabled = true;
+      elements.getTripBtn.disabled = true;
+      elements.updateTripBtn.disabled = true;
+      elements.loadKakaoBtn.disabled = true;
+      elements.kakaoUrl.value = "도착지 선택 후 생성";
+      elements.openKakaoLink.href = "#";
+      elements.openKakaoLink.setAttribute("aria-disabled", "true");
+      renderJson(elements.apiLog, []);
+      renderPlaces();
+      renderTrips();
+      renderHookFeed();
+      renderRouteSummary();
+      renderMap();
+    }
+
+    $("#loadPlacesBtn").addEventListener("click", loadPlaces);
+    $("#loadTripsBtn").addEventListener("click", loadTrips);
+    $("#getTripBtn").addEventListener("click", getSelectedTrip);
+    $("#updateTripBtn").addEventListener("click", updateSelectedTrip);
+    $("#callMapBtn").addEventListener("click", requestMapRoute);
+    $("#moveStepBtn").addEventListener("click", moveStep);
+    $("#arriveBtn").addEventListener("click", arriveNow);
+    $("#loadKakaoBtn").addEventListener("click", () => {
+      if (!state.route?.kakaoUrl) return;
+      elements.mapWebView.src = state.route.kakaoUrl;
+      logApi({
+        request: {
+          method: "WEBVIEW_LOAD",
+          path: state.route.kakaoUrl,
+          body: {
+            origin: state.currentLocation,
+            destination: state.selectedPlace
+          }
+        },
+        response: { ok: true, loadedIn: "iframe-webview" }
+      });
+    });
+    $("#saveFeedbackBtn").addEventListener("click", () => saveFeedback());
+    $("#interruptBtn").addEventListener("click", () => {
+      elements.feedbackState.value = "interrupted";
+      saveFeedback("interrupted");
+    });
+    $("#tripTabBtn").addEventListener("click", () => showTab("trip"));
+    $("#feedbackTabBtn").addEventListener("click", () => showTab("feedback"));
+    $("#resetDemoBtn").addEventListener("click", resetDemo);
+
+    resetDemo();
+  </script>
+</body>
+</html>
